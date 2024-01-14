@@ -1,25 +1,90 @@
-from llama_index.llms import Ollama
-from flask import Flask, request, jsonify
+"""Awesome chat module"""
+import chainlit as cl
 
-llm = Ollama(model="mistral:instruct")
+from langchain.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains import ConversationalRetrievalChain
+from langchain.vectorstores.qdrant import Qdrant
+from langchain.embeddings import OllamaEmbeddings
+from langchain.chat_models import ChatOllama
+from langchain.memory import ConversationBufferMemory
+from langchain.prompts import PromptTemplate
 
-app = Flask(__name__)
+# Load & prepare context for LLM
+loader = PyPDFLoader('data/test.pdf')
+pages = loader.load()
 
-@app.route('/api')
-def health_check():
-  return ''
+r_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1500,
+    chunk_overlap=200,
+    separators=["\n\n", "\n", " ", ""]
+)
 
-@app.route('/api/generate', methods=['POST'])
-def generate():
-  question = request.json["text"];
-  if (len(question.strip()) < 1):
-    return jsonify({ 'error': "The text field shouldn't be empty 😉" }), 400
-  
-  app.logger.debug('[question]: ' + question)
-  try: 
-    answer = str(llm.complete(question))
-    app.logger.debug('[answer]: ' + answer)
+# Create our splits from the PDF
+docs = r_splitter.split_documents(pages)
+print(docs)
 
-    return jsonify({ 'answer': answer })
-  except Exception as ex:
-    return jsonify({ 'error': 'Oops... Our AI needs some rest. Please try again later 👨‍🔧' }), 500
+PROMPT_TEMPLATE = """[INST] Make a joke from the following text:
+{text}
+[/INST]
+"""
+
+# Define the prompt
+prompt = PromptTemplate(input_variables=["text"], template=PROMPT_TEMPLATE)
+
+# Set up Ollama Embeddings
+embeddings = OllamaEmbeddings(model='mistral:instruct')
+
+# Set up Qdrant database
+qdrant = Qdrant.from_documents(
+  docs,
+  embeddings,
+  location=":memory:",  # Local mode with in-memory storage only
+  collection_name="test",
+)
+
+# Initialize chat model
+llm = ChatOllama(model="mistral:instruct", temperature=1)
+
+def init_qa_chain():
+    """Init of question-answering chain"""
+    memory = ConversationBufferMemory(
+        memory_key="chat_history",
+        return_messages=True
+    )
+    qa = ConversationalRetrievalChain.from_llm(
+        llm,
+        retriever=qdrant.as_retriever(),
+        memory=memory
+    )
+
+    return qa
+
+@cl.on_chat_start
+async def session_start():
+    """Startup of the chat session"""
+    qa_chain = init_qa_chain()
+    cl.user_session.set("qa_chain", qa_chain)
+
+@cl.on_message
+async def main(message: cl.Message):
+    """Incoming message handling"""
+    try:
+        qa_chain = cl.user_session.get("qa_chain")
+        cb = cl.AsyncLangchainCallbackHandler(
+          stream_final_answer=True,
+          answer_prefix_tokens=["FINAL", "ANSWER"]
+        )
+
+        print(f"question: {message.content}")
+
+        complete_message = prompt.format(text=message.content)
+        response = await qa_chain.acall(complete_message, callbacks=[cb])
+        answer = response["answer"]
+
+        print(f"answer: {answer}")
+
+        await cl.Message(content=answer).send()
+    except Exception as ex:
+        print(f"Exception: {ex}")
+        await cl.Message(content="Oops... Our Bot needs some rest. Please try again later 👨‍🔧").send()

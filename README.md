@@ -1,12 +1,12 @@
-# 🤖 The first shot in the leg with an AI (Llama Index, Ollama, Mistral)
+# 🤖 The second shot in the leg with an AI (Chainlit, LangChain, Ollama, Mistral)
 
-This project serves as a basic HTTP service facilitating communication with the Mistral AI model. The `/api/generate` endpoint is available via [POST] and accepts a JSON body containing a 'text' field. Submitting data to this endpoint prompts the Mistral AI model to generate a response based on the provided input.
+This project serves as a basic example of integrating [Chainlit](https://chainlit.io/) and [LangChain](https://www.langchain.com/) with the Mistral Large Language Model (LLM). Ensure that the `data/test.pdf` file contains the necessary context for the LLM. Additionally, you may want to customize the `PROMPT_TEMPLATE` to suit your needs. 🙃
 
 ## 🚀 Getting started
 
-To start the project install all dependencies in the requirements section.
+To start the project, install all dependencies in the requirements section.
 
-Then download `mistral:instruct` model:
+Download `mistral:instruct` model (if needed):
 
 ```bash
 ollama pull mistral:instruct
@@ -18,16 +18,21 @@ Install Python dependencies:
 pip install -r requirements.txt
 ```
 
-And finally start the dev server:
+And finally, start the server:
 
 ```bash
-flask run --debug
+chainlit run app.py -w -h
 ```
+
+That's it! 🎉
+Now visit [http://localhost:8000](http://localhost:8000) to play with it! 😏
 
 ## Requirements
 
 - [Python][python] 3.8.10+
 - [Ollama][ollama] 0.2.17+
+- [Qdrant][qdrant] 1.7.3+
 
 [python]: https://www.python.org/
 [ollama]: https://ollama.ai/
+[qdrant]: https://qdrant.tech/
