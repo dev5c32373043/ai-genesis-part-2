@@ -2,6 +2,8 @@
 
 This project serves as a basic example of integrating [Chainlit](https://chainlit.io/) and [LangChain](https://www.langchain.com/) with the Mistral Large Language Model (LLM). Ensure that the `data/test.pdf` file contains the necessary context for the LLM. Additionally, you may want to customize the `PROMPT_TEMPLATE` to suit your needs. 🙃
 
+[preview](https://github.com/dev5c32373043/ai-genesis-part-2/assets/13788002/92afb332-8729-4778-abc5-870c57c6919a)
+
 ## 🚀 Getting started
 
 To start the project, install all dependencies in the requirements section.
